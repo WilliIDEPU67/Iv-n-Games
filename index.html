@@ -1,0 +1,2483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ESCALERA ODS: UN VIAJE HACIA EL FUTURO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-display: 'Fredoka', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+        }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: var(--font-body);
+            background-color: #090d16;
+            color: #ffffff;
+        }
+        h1, h2, h3, .font-display {
+            font-family: var(--font-display);
+        }
+        #game-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 1;
+        }
+        .glass-panel {
+            background: rgba(13, 20, 36, 0.78);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        }
+        .glass-light {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.01);
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.45);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .option-btn:active:not(:disabled) {
+            transform: translateY(1px) scale(0.99);
+        }
+        .btn-cta {
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 50%, #26bde2 100%);
+            box-shadow: 0 8px 25px rgba(0, 114, 255, 0.45), inset 0 2px 0 rgba(255,255,255,0.4);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-cta:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 12px 32px rgba(0, 198, 255, 0.65), inset 0 2px 0 rgba(255,255,255,0.6);
+        }
+        .btn-cta:active {
+            transform: translateY(1px) scale(0.98);
+        }
+        @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(38, 189, 226, 0.6)); }
+            50% { transform: scale(1.04); filter: drop-shadow(0 0 22px rgba(86, 192, 43, 0.85)); }
+        }
+        @keyframes turboPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(250, 204, 21, 0.55); }
+            50% { transform: scale(1.06); box-shadow: 0 0 24px rgba(251, 146, 60, 0.9); }
+        }
+        @keyframes floatY {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.85) translateY(15px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-spin-slow {
+            animation: spinSlow 28s linear infinite;
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 3.5s ease-in-out infinite;
+        }
+        .animate-turbo {
+            animation: turboPulse 1.2s ease-in-out infinite;
+        }
+        .animate-float {
+            animation: floatY 3s ease-in-out infinite;
+        }
+        .animate-pop {
+            animation: popIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .heart-beat {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .heart-lost {
+            opacity: 0.22;
+            transform: scale(0.8);
+            filter: grayscale(100%);
+        }
+        /* Custom scrollbar for small screens if needed */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.25);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LIENZO PRINCIPAL DEL JUEGO -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- BOTÓN FLOTANTE DE SONIDO (SIEMPRE ACCESIBLE) -->
+    <button id="btn-audio-toggle" onclick="toggleAudio()" title="Activar / Silenciar sonido"
+        class="fixed top-3 right-3 z-50 glass-panel w-11 h-11 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition shadow-lg">
+        <span id="audio-icon" class="text-xl">🔊</span>
+    </button>
+
+    <!-- ==================== 1. PANTALLA DE INICIO ==================== -->
+    <div id="screen-start" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-sm">
+        <div class="glass-panel max-w-2xl w-full rounded-3xl p-6 sm:p-8 text-center relative overflow-hidden animate-pop">
+            <!-- Resplandor decorativo -->
+            <div class="absolute -top-24 -left-24 w-56 h-56 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -right-24 w-56 h-56 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Rueda Cromática SVG de los 17 ODS -->
+            <div class="relative w-28 h-28 sm:w-32 sm:h-32 mx-auto mb-4 animate-pulse-glow">
+                <svg id="sdg-wheel-svg" viewBox="0 0 200 200" class="w-full h-full animate-spin-slow"></svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-slate-900/90 border-2 border-white/30 flex items-center justify-center shadow-inner">
+                        <span class="text-2xl sm:text-3xl">🌍</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="inline-block px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-xs sm:text-sm font-semibold tracking-wider uppercase mb-2">
+                Agenda 2030 • Naciones Unidas
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-white via-cyan-200 to-emerald-200 bg-clip-text text-transparent mb-3 leading-tight">
+                ESCALERA ODS:<br>UN VIAJE HACIA EL FUTURO
+            </h1>
+
+            <p class="text-slate-200 text-sm sm:text-base max-w-xl mx-auto mb-6 leading-relaxed">
+                Asciende <strong>28 escalones</strong> a través de <strong>4 dimensiones extraordinarias</strong> superando retos sobre los 17 Objetivos de Desarrollo Sostenible. ¡Encadena <strong>10 aciertos</strong> para activar el <strong>Avance x2</strong> y <strong>15 aciertos</strong> para ganar <strong>+1 Vida Extra</strong>!
+            </p>
+
+            <!-- Vista previa de los 4 Mundos -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-7 text-left">
+                <div class="glass-light rounded-2xl p-2.5 border-l-4 border-emerald-400">
+                    <div class="text-lg">🌍 <span class="font-bold text-xs text-emerald-300">MUNDO 1</span></div>
+                    <div class="font-semibold text-xs sm:text-sm">La Tierra</div>
+                    <div class="text-[11px] text-slate-300">ODS 1 al 5</div>
+                </div>
+                <div class="glass-light rounded-2xl p-2.5 border-l-4 border-cyan-400">
+                    <div class="text-lg">🚀 <span class="font-bold text-xs text-cyan-300">MUNDO 2</span></div>
+                    <div class="font-semibold text-xs sm:text-sm">El Espacio</div>
+                    <div class="text-[11px] text-slate-300">ODS 6 al 10</div>
+                </div>
+                <div class="glass-light rounded-2xl p-2.5 border-l-4 border-amber-500">
+                    <div class="text-lg">🕳️ <span class="font-bold text-xs text-amber-300">MUNDO 3</span></div>
+                    <div class="font-semibold text-xs sm:text-sm">Agujero Negro</div>
+                    <div class="text-[11px] text-slate-300">ODS 11 al 15</div>
+                </div>
+                <div class="glass-light rounded-2xl p-2.5 border-l-4 border-fuchsia-400">
+                    <div class="text-lg">🌌 <span class="font-bold text-xs text-fuchsia-300">MUNDO 4</span></div>
+                    <div class="font-semibold text-xs sm:text-sm">Nueva Dimensión</div>
+                    <div class="text-[11px] text-slate-300">ODS 16 y 17</div>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="btn-cta text-white font-display font-bold text-lg sm:text-xl px-8 py-4 rounded-2xl inline-flex items-center gap-3 cursor-pointer">
+                <span>COMENZAR AVENTURA</span>
+                <span class="text-2xl">🚀</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== 2. INTERFAZ HUD DURANTE EL JUEGO ==================== -->
+    <div id="hud-container" class="fixed inset-0 z-20 pointer-events-none hidden flex-col justify-between p-3 sm:p-5">
+        
+        <!-- BARRA SUPERIOR: MUNDO, ESCALÓN, PROGRESO, RACHA, VIDAS -->
+        <div class="pointer-events-auto max-w-6xl w-full mx-auto pr-12 sm:pr-14">
+            <div class="glass-panel rounded-2xl p-3 sm:px-5 sm:py-3 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+                
+                <!-- Mundo Actual -->
+                <div class="flex items-center gap-2.5">
+                    <div id="hud-world-icon" class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-2xl shadow-inner">
+                        🌍
+                    </div>
+                    <div>
+                        <div id="hud-world-label" class="text-[11px] uppercase tracking-wider font-bold text-cyan-300">MUNDO 1 DE 4</div>
+                        <div id="hud-world-name" class="font-display font-bold text-sm sm:text-base leading-tight">LA TIERRA</div>
+                    </div>
+                </div>
+
+                <!-- Barra de Progreso Global y del Mundo -->
+                <div class="flex-1 min-w-[150px] max-w-sm mx-1">
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span id="hud-step-text" class="text-white">Escalón 0 / 28</span>
+                        <span id="hud-score-text" class="text-emerald-300">Aciertos: 0</span>
+                    </div>
+                    <!-- Barra Total 28 escalones -->
+                    <div class="w-full h-2.5 bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-white/10">
+                        <div id="hud-progress-total" class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-fuchsia-500 transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <!-- Puntos de progreso del mundo actual (7 escalones) -->
+                    <div id="hud-world-dots" class="flex justify-between gap-1 mt-1.5">
+                        <!-- Generado dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Indicador de Racha y Hitos (x2 a los 10, +1 Vida a los 15) -->
+                <div id="hud-streak-box" class="flex items-center gap-2 bg-slate-900/75 px-3 py-1.5 rounded-xl border border-white/15 transition-all duration-300">
+                    <span id="hud-streak-icon" class="text-lg">🔥</span>
+                    <div class="leading-tight">
+                        <div class="flex items-center gap-1.5">
+                            <span id="hud-streak-text" class="font-display font-bold text-xs sm:text-sm text-white">Racha: 0</span>
+                            <span id="hud-turbo-badge" class="hidden px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-display font-extrabold text-[10px] tracking-wide">
+                                ⚡ x2 ACTIVO
+                            </span>
+                        </div>
+                        <div id="hud-streak-goal" class="text-[10px] text-amber-300/90 font-medium">
+                            10 seguidas: x2 • 15: +1❤️
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vidas Restantes + Botón Reinicio Rápido -->
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-white/10">
+                        <span class="text-xs font-semibold text-slate-300 hidden md:inline">Vidas:</span>
+                        <div id="hud-lives" class="flex items-center gap-0.5 text-base sm:text-lg">
+                            <span class="heart-beat">❤️</span>
+                            <span class="heart-beat">❤️</span>
+                            <span class="heart-beat">❤️</span>
+                        </div>
+                    </div>
+                    <button onclick="restartFullGame()" title="Reiniciar partida desde el principio"
+                        class="glass-light hover:bg-white/20 w-9 h-9 rounded-xl flex items-center justify-center text-sm text-white transition cursor-pointer">
+                        🔄
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ZONA MEDIA: BANNER FLOTANTE DE CELEBRACIÓN / RACHA / TRANSICIÓN -->
+        <div id="toast-banner" class="mx-auto pointer-events-none transition-all duration-300 opacity-0 -translate-y-2">
+            <div id="toast-content" class="glass-panel px-5 py-2.5 rounded-2xl border-2 border-emerald-400/60 flex items-center gap-2.5 shadow-xl">
+                <span id="toast-emoji" class="text-2xl">✨</span>
+                <span id="toast-text" class="font-display font-bold text-sm sm:text-base text-white">¡Respuesta correcta!</span>
+            </div>
+        </div>
+
+        <!-- PANEL INFERIOR / DERECHO: TARJETA DE PREGUNTA Y 4 RESPUESTAS -->
+        <div class="pointer-events-auto max-w-5xl w-full mx-auto lg:flex lg:justify-end">
+            <div id="question-panel" class="glass-panel rounded-3xl p-4 sm:p-6 w-full lg:w-[540px] border border-white/20 transition-all duration-300">
+                <!-- Cabecera de la Pregunta: Insignia ODS y Dificultad -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div id="sdg-badge" class="inline-flex items-center gap-2 px-3 py-1 rounded-xl text-xs sm:text-sm font-bold text-white shadow-md" style="background-color: #E5243B;">
+                        <span id="sdg-badge-num" class="bg-black/25 px-2 py-0.5 rounded-md">ODS 1</span>
+                        <span id="sdg-badge-name">Fin de la pobreza</span>
+                    </div>
+                    <div id="question-difficulty" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/10 text-cyan-200 border border-white/10">
+                        Escalón 1 • Básico
+                    </div>
+                </div>
+
+                <!-- Texto de la Pregunta -->
+                <h2 id="question-text" class="font-display font-semibold text-base sm:text-xl text-white mb-4 leading-snug">
+                    Cargando pregunta...
+                </h2>
+
+                <!-- 4 Opciones de Respuesta -->
+                <div id="options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                    <!-- Botones A, B, C, D generados dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 3. MODAL EDUCATIVO DE ERROR ==================== -->
+    <div id="modal-feedback" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+        <div class="glass-panel max-w-lg w-full rounded-3xl p-6 sm:p-7 border-2 border-rose-500/40 animate-pop">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-2xl shrink-0">
+                    💡
+                </div>
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-rose-300">Aprendamos juntos • -1 Vida</span>
+                    <h3 class="font-display font-bold text-xl text-white">¡Casi! Veamos la respuesta</h3>
+                </div>
+            </div>
+
+            <div id="feedback-sdg-tag" class="inline-block px-3 py-1 rounded-lg text-xs font-bold text-white mb-3" style="background-color: #E5243B;">
+                ODS 1: Fin de la pobreza
+            </div>
+
+            <div class="bg-emerald-500/15 border border-emerald-400/40 rounded-2xl p-3.5 mb-3">
+                <div class="text-xs font-bold text-emerald-300 uppercase mb-1">Respuesta Correcta:</div>
+                <div id="feedback-correct-answer" class="font-bold text-white text-sm sm:text-base"></div>
+            </div>
+
+            <p id="feedback-explanation" class="text-slate-200 text-sm leading-relaxed mb-6">
+                Explicación educativa sobre la importancia de este objetivo.
+            </p>
+
+            <button onclick="closeFeedbackModal()" class="w-full btn-cta text-white font-display font-bold text-base py-3.5 rounded-2xl cursor-pointer">
+                ENTENDIDO, CONTINUAR AVENTURA ➔
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== 4. MODAL TRANSICIÓN DE MUNDO ==================== -->
+    <div id="modal-world-transition" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm pointer-events-none">
+        <div class="glass-panel max-w-md w-full rounded-3xl p-6 text-center border-2 border-cyan-400/50 animate-pop">
+            <div id="trans-icon" class="text-5xl sm:text-6xl mb-3 animate-float">🚀</div>
+            <div id="trans-subtitle" class="text-xs font-bold uppercase tracking-widest text-cyan-300 mb-1">¡MUNDO DESBLOQUEADO!</div>
+            <h2 id="trans-title" class="font-display font-bold text-2xl sm:text-3xl text-white mb-2">MUNDO 2: EL ESPACIO</h2>
+            <p id="trans-desc" class="text-slate-200 text-sm leading-relaxed">
+                Abandonas la atmósfera terrestre para explorar los desafíos del agua, la energía limpia y la innovación.
+            </p>
+        </div>
+    </div>
+
+    <!-- ==================== 5. PANTALLA DE GAME OVER (SIN VIDAS) ==================== -->
+    <div id="screen-gameover" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+        <div class="glass-panel max-w-md w-full rounded-3xl p-7 text-center border-2 border-amber-400/40 animate-pop">
+            <div class="text-5xl mb-3">🌱</div>
+            <h2 class="font-display font-bold text-2xl sm:text-3xl text-white mb-2">¡No te rindas!</h2>
+            <p class="text-slate-200 text-sm sm:text-base mb-5 leading-relaxed">
+                El planeta te necesita. Cada error es una oportunidad para aprender cómo proteger nuestro hogar común.
+            </p>
+            <div class="glass-light rounded-2xl p-3.5 mb-6 flex justify-around text-center">
+                <div>
+                    <div class="text-xs text-slate-300">Escalón alcanzado</div>
+                    <div id="go-step" class="font-display font-bold text-xl text-cyan-300">0 / 28</div>
+                </div>
+                <div class="w-px bg-white/15"></div>
+                <div>
+                    <div class="text-xs text-slate-300">Mundo actual</div>
+                    <div id="go-world" class="font-display font-bold text-xl text-emerald-300">La Tierra</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="retryCurrentWorld()" class="flex-1 btn-cta text-white font-display font-bold py-3.5 px-4 rounded-2xl cursor-pointer">
+                    Reintentar Mundo 🔄
+                </button>
+                <button onclick="restartFullGame()" class="flex-1 glass-light hover:bg-white/20 text-white font-display font-bold py-3.5 px-4 rounded-2xl transition cursor-pointer">
+                    Reiniciar Viaje
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 6. PANTALLA FINAL DE VICTORIA ==================== -->
+    <div id="screen-victory" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-slate-950/55 backdrop-blur-xs overflow-y-auto">
+        <div class="glass-panel max-w-2xl w-full rounded-3xl p-6 sm:p-8 text-center border-2 border-emerald-400/50 my-auto animate-pop">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs sm:text-sm font-bold uppercase tracking-wider mb-3">
+                🏆 Misión Cumplida • 28 Escalones Superados
+            </div>
+
+            <h2 class="font-display font-bold text-2xl sm:text-4xl bg-gradient-to-r from-emerald-300 via-cyan-200 to-amber-200 bg-clip-text text-transparent mb-4">
+                ¡UN FUTURO SOSTENIBLE ES POSIBLE!
+            </h2>
+
+            <!-- Mensaje exacto requerido -->
+            <div class="bg-white/10 border border-white/20 rounded-2xl p-4 sm:p-5 mb-5 shadow-inner">
+                <p class="text-white font-medium text-base sm:text-lg leading-relaxed">
+                    «¡ENHORABUENA! Has recorrido los 17 Objetivos de Desarrollo Sostenible. Ahora sabes que cambiar el mundo empieza con pequeñas acciones. ¡El futuro está en tus manos!»
+                </p>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="grid grid-cols-3 gap-2.5 mb-5">
+                <div class="glass-light rounded-2xl p-3">
+                    <div class="text-xs text-slate-300">Escalones</div>
+                    <div class="font-display font-bold text-xl sm:text-2xl text-cyan-300">28 / 28</div>
+                </div>
+                <div class="glass-light rounded-2xl p-3">
+                    <div class="text-xs text-slate-300">Vidas Restantes</div>
+                    <div id="vic-lives" class="font-display font-bold text-xl sm:text-2xl text-rose-400">❤️❤️❤️</div>
+                </div>
+                <div class="glass-light rounded-2xl p-3">
+                    <div class="text-xs text-slate-300">ODS Dominados</div>
+                    <div class="font-display font-bold text-xl sm:text-2xl text-emerald-300">17 / 17</div>
+                </div>
+            </div>
+
+            <!-- Mosaico de los 17 ODS Desbloqueados -->
+            <div class="mb-6">
+                <div class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Insignias Oficiales de los 17 ODS Desbloqueadas</div>
+                <div id="victory-sdg-grid" class="grid grid-cols-6 sm:grid-cols-9 gap-1.5 justify-center">
+                    <!-- Generado dinámicamente -->
+                </div>
+            </div>
+
+            <button onclick="restartFullGame()" class="btn-cta text-white font-display font-bold text-lg px-8 py-4 rounded-2xl inline-flex items-center gap-2 cursor-pointer">
+                <span>VOLVER A JUGAR</span>
+                <span>🌍✨</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+    /**
+     * ============================================================================
+     * 1. DATOS OFICIALES DE LOS 17 OBJETIVOS DE DESARROLLO SOSTENIBLE (ONU)
+     * ============================================================================
+     */
+    const SDG_DATA = {
+        1:  { num: 1,  name: "Fin de la pobreza", color: "#E5243B", icon: "🏘️" },
+        2:  { num: 2,  name: "Hambre cero", color: "#DDA63A", icon: "🌾" },
+        3:  { num: 3,  name: "Salud y bienestar", color: "#4C9F38", icon: "❤️‍🩹" },
+        4:  { num: 4,  name: "Educación de calidad", color: "#C5192D", icon: "📚" },
+        5:  { num: 5,  name: "Igualdad de género", color: "#FF3A21", icon: "⚖️" },
+        6:  { num: 6,  name: "Agua limpia y saneamiento", color: "#26BDE2", icon: "💧" },
+        7:  { num: 7,  name: "Energía asequible y no contaminante", color: "#FCC30B", icon: "☀️" },
+        8:  { num: 8,  name: "Trabajo decente y crecimiento económico", color: "#A21942", icon: "💼" },
+        9:  { num: 9,  name: "Industria, innovación e infraestructura", color: "#FD6925", icon: "⚙️" },
+        10: { num: 10, name: "Reducción de las desigualdades", color: "#DD1367", icon: "🤝" },
+        11: { num: 11, name: "Ciudades y comunidades sostenibles", color: "#FD9D24", icon: "🏙️" },
+        12: { num: 12, name: "Producción y consumo responsables", color: "#BF8B2E", icon: "♻️" },
+        13: { num: 13, name: "Acción por el clima", color: "#3F7E44", icon: "🌡️" },
+        14: { num: 14, name: "Vida submarina", color: "#0A97D9", icon: "🐋" },
+        15: { num: 15, name: "Vida de ecosistemas terrestres", color: "#56C02B", icon: "🌳" },
+        16: { num: 16, name: "Paz, justicia e instituciones sólidas", color: "#00689D", icon: "🕊️" },
+        17: { num: 17, name: "Alianzas para lograr los objetivos", color: "#19486A", icon: "🌐" }
+    };
+
+    const WORLDS = [
+        {
+            id: 1,
+            name: "LA TIERRA",
+            icon: "🌍",
+            subtitle: "MUNDO 1 DE 4",
+            sdgs: "ODS 1 al 5",
+            desc: "Comienza tu ascenso en nuestro hogar terrestre defendiendo la dignidad humana, la salud, la educación y la igualdad.",
+            accent: "#56C02B"
+        },
+        {
+            id: 2,
+            name: "EL ESPACIO",
+            icon: "🚀",
+            subtitle: "MUNDO 2 DE 4",
+            sdgs: "ODS 6 al 10",
+            desc: "Has superado la atmósfera. Asciende entre estrellas impulsando el agua limpia, las energías renovables y la innovación justa.",
+            accent: "#26BDE2"
+        },
+        {
+            id: 3,
+            name: "EL AGUJERO NEGRO",
+            icon: "🕳️",
+            subtitle: "MUNDO 3 DE 4",
+            sdgs: "ODS 11 al 15",
+            desc: "Frente al horizonte de sucesos de la crisis climática, tus decisiones protegerán las ciudades, los océanos y los bosques.",
+            accent: "#FD9D24"
+        },
+        {
+            id: 4,
+            name: "UNA NUEVA DIMENSIÓN",
+            icon: "🌌",
+            subtitle: "MUNDO 4 DE 4",
+            sdgs: "ODS 16 y 17",
+            desc: "Has cruzado el portal hacia el futuro. Consolida la paz, la justicia y las alianzas globales para culminar la Agenda 2030.",
+            accent: "#E5243B"
+        }
+    ];
+
+    /**
+     * ============================================================================
+     * 2. BANCO DE PREGUNTAS EDUCATIVAS (28 ESCALONES + PREGUNTAS EXTRA DE RESPALDO)
+     * Distribuidas rigurosamente por mundo y dificultad creciente.
+     * ============================================================================
+     */
+    const QUESTION_BANK = {
+        // MUNDO 1: LA TIERRA (ODS 1, 2, 3, 4, 5) - Escalones 1 a 7 (10 preguntas únicas)
+        1: [
+            {
+                sdg: 4,
+                diff: "Básico",
+                q: "¿Qué busca principalmente el ODS 4 de las Naciones Unidas?",
+                options: [
+                    "Mejorar las carreteras y autopistas.",
+                    "Proteger exclusivamente los océanos.",
+                    "Garantizar una educación inclusiva, equitativa y de calidad.",
+                    "Reducir el consumo eléctrico industrial."
+                ],
+                correct: 2,
+                explanation: "El ODS 4 garantiza una educación inclusiva y equitativa de calidad y promueve oportunidades de aprendizaje durante toda la vida para todas las personas."
+            },
+            {
+                sdg: 1,
+                diff: "Básico",
+                q: "¿Cuál es el objetivo principal del ODS 1: Fin de la pobreza?",
+                options: [
+                    "Erradicar la pobreza extrema en todas sus formas en todo el mundo.",
+                    "Construir centros comerciales en todas las ciudades.",
+                    "Aumentar el uso de combustibles fósiles.",
+                    "Reducir los días de vacaciones escolares."
+                ],
+                correct: 0,
+                explanation: "El ODS 1 busca poner fin a la pobreza en todas sus formas y garantizar sistemas de protección social para los más vulnerables."
+            },
+            {
+                sdg: 2,
+                diff: "Básico",
+                q: "¿Qué acción cotidiana contribuye directamente al ODS 2 (Hambre cero)?",
+                options: [
+                    "Comprar comida en exceso y tirarla si caduca.",
+                    "Planificar las compras para evitar el desperdicio de alimentos y apoyar productos locales.",
+                    "Consumir únicamente alimentos ultraprocesados.",
+                    "Desperdiciar agua al cocinar."
+                ],
+                correct: 1,
+                explanation: "Un tercio de los alimentos producidos en el mundo se desperdicia. Evitar tirar comida y apoyar la agricultura sostenible ayuda a lograr el Hambre Cero."
+            },
+            {
+                sdg: 3,
+                diff: "Intermedio",
+                q: "Además de curar enfermedades, ¿qué promueve el ODS 3 (Salud y bienestar)?",
+                options: [
+                    "El sedentarismo frente a pantallas todo el día.",
+                    "La prevención, la vacunación universal, la salud mental y hábitos de vida saludables.",
+                    "El consumo sin control de medicamentos.",
+                    "La eliminación de los parques públicos."
+                ],
+                correct: 1,
+                explanation: "El ODS 3 abarca desde la salud materna e infantil hasta la prevención de enfermedades, el bienestar mental y el acceso universal a servicios sanitarios."
+            },
+            {
+                sdg: 5,
+                diff: "Intermedio",
+                q: "¿Qué defiende el ODS 5: Igualdad de género?",
+                options: [
+                    "Que solo los hombres puedan dirigir empresas tecnológicas.",
+                    "Que las niñas y mujeres tengan los mismos derechos, oportunidades y liderazgo que los hombres.",
+                    "Que los trabajos domésticos correspondan únicamente a las mujeres.",
+                    "Limitar el acceso de las niñas a la ciencia."
+                ],
+                correct: 1,
+                explanation: "El ODS 5 busca eliminar toda forma de discriminación y violencia contra mujeres y niñas, asegurando su participación plena en la vida económica y pública."
+            },
+            {
+                sdg: 2,
+                diff: "Avanzado",
+                q: "¿Por qué la agricultura sostenible es clave dentro del ODS 2?",
+                options: [
+                    "Porque agota los suelos rápidamente para producir más.",
+                    "Porque permite producir alimentos nutritivos protegiendo la biodiversidad y el suelo para el futuro.",
+                    "Porque sustituye todos los bosques por monocultivos.",
+                    "Porque utiliza pesticidas tóxicos sin control."
+                ],
+                correct: 1,
+                explanation: "La agricultura sostenible conserva la fertilidad de la tierra, ahorra agua y hace los cultivos más resistentes frente al cambio climático."
+            },
+            {
+                sdg: 1,
+                diff: "Desafío Tierra",
+                q: "¿Cómo se relacionan el ODS 1 (Fin de la pobreza) y el ODS 4 (Educación de calidad)?",
+                options: [
+                    "No tienen ninguna relación entre sí.",
+                    "La educación de calidad rompe el ciclo de la pobreza al brindar herramientas para empleos dignos.",
+                    "La pobreza mejora automáticamente sin necesidad de escuelas.",
+                    "Solo las personas ricas necesitan educación."
+                ],
+                correct: 1,
+                explanation: "La educación es uno de los motores más poderosos para reducir la desigualdad, mejorar la salud y sacar a millones de familias de la pobreza."
+            },
+            {
+                sdg: 3,
+                diff: "Intermedio",
+                q: "¿Cuál de estas medidas mejora la salud comunitaria según el ODS 3?",
+                options: [
+                    "Fomentar el transporte activo como caminar o ir en bicicleta y reducir la contaminación del aire.",
+                    "Aumentar el tráfico de vehículos contaminantes junto a colegios.",
+                    "Reducir las zonas verdes urbanas.",
+                    "Eliminar campañas de higiene básica."
+                ],
+                correct: 0,
+                explanation: "La movilidad activa y un aire limpio previenen enfermedades respiratorias y cardiovasculares, mejorando el bienestar colectivo."
+            },
+            {
+                sdg: 5,
+                diff: "Avanzado",
+                q: "¿Qué significa la corresponsabilidad en el hogar dentro del ODS 5?",
+                options: [
+                    "Repartir equitativamente las tareas domésticas y de cuidado entre todas las personas de la familia.",
+                    "Que solo una persona asuma todas las tareas sin ayuda.",
+                    "Evitar que los niños aprendan a colaborar en casa.",
+                    "Limitar el tiempo de estudio de las niñas."
+                ],
+                correct: 0,
+                explanation: "El ODS 5.4 reconoce y valora los cuidados y el trabajo doméstico no remunerado promoviendo la responsabilidad compartida en el hogar."
+            },
+            {
+                sdg: 4,
+                diff: "Avanzado",
+                q: "¿Qué papel juega la alfabetización digital en el ODS 4?",
+                options: [
+                    "Permite que estudiantes de cualquier lugar accedan al conocimiento, la ciencia y oportunidades educativas.",
+                    "Sustituye por completo la convivencia humana.",
+                    "Solo sirve para entretenimiento sin valor educativo.",
+                    "Aumenta la desigualdad entre escuelas."
+                ],
+                correct: 0,
+                explanation: "Las competencias digitales y el acceso equitativo a herramientas educativas reducen brechas y preparan para los empleos del futuro."
+            }
+        ],
+
+        // MUNDO 2: EL ESPACIO (ODS 6, 7, 8, 9, 10) - Escalones 8 a 14 (10 preguntas únicas)
+        2: [
+            {
+                sdg: 6,
+                diff: "Básico",
+                q: "¿Qué porcentaje aproximado del agua del planeta es agua dulce disponible para el consumo?",
+                options: [
+                    "Más del 70% del agua terrestre.",
+                    "Menos del 1% es agua dulce accesible en ríos, lagos y acuíferos.",
+                    "Exactamente el 50%.",
+                    "El agua dulce es infinita y nunca se agota."
+                ],
+                correct: 1,
+                explanation: "Aunque la Tierra es el planeta azul, menos del 1% del agua es dulce y accesible. Por eso el ODS 6 urge a cuidarla y evitar su contaminación."
+            },
+            {
+                sdg: 7,
+                diff: "Básico",
+                q: "¿Cuál de las siguientes fuentes pertenece al ODS 7 (Energía asequible y no contaminante)?",
+                options: [
+                    "Carbón mineral.",
+                    "Petróleo crudo.",
+                    "Energía solar y energía eólica.",
+                    "Gas natural sin captura."
+                ],
+                correct: 2,
+                explanation: "Las energías renovables como la solar y la eólica no emiten gases de efecto invernadero durante su generación y son inagotables."
+            },
+            {
+                sdg: 8,
+                diff: "Intermedio",
+                q: "¿Qué significa 'Trabajo decente' según el ODS 8?",
+                options: [
+                    "Cualquier empleo sin importar las condiciones de seguridad.",
+                    "Un empleo productivo con salario justo, seguridad laboral, derechos y sin trabajo infantil.",
+                    "Trabajar sin descanso todos los días del año.",
+                    "Sustituir todos los derechos laborales por contratos temporales."
+                ],
+                correct: 1,
+                explanation: "El ODS 8 promueve el crecimiento económico sostenido junto con empleos dignos, seguros, igualitarios y erradicando el trabajo infantil y forzoso."
+            },
+            {
+                sdg: 9,
+                diff: "Intermedio",
+                q: "¿Qué impulsa el ODS 9 (Industria, innovación e infraestructura)?",
+                options: [
+                    "Mantener fábricas altamente contaminantes sin modernizar.",
+                    "Construir infraestructuras resilientes, promover la industrialización sostenible y fomentar la investigación científica.",
+                    "Prohibir el acceso a internet en zonas rurales.",
+                    "Frenar el desarrollo de tecnologías limpias."
+                ],
+                correct: 1,
+                explanation: "La innovación tecnológica y las infraestructuras sostenibles son esenciales para encontrar soluciones duraderas a los retos económicos y ambientales."
+            },
+            {
+                sdg: 10,
+                diff: "Intermedio",
+                q: "¿Cuál es el propósito principal del ODS 10: Reducción de las desigualdades?",
+                options: [
+                    "Que todas las personas tengan exactamente el mismo corte de pelo.",
+                    "Reducir la brecha de ingresos y oportunidades dentro de los países y entre ellos, sin discriminar a nadie.",
+                    "Aumentar las barreras para personas con discapacidad.",
+                    "Favorecer solo a las regiones más ricas."
+                ],
+                correct: 1,
+                explanation: "El ODS 10 busca garantizar la igualdad de oportunidades y eliminar leyes, políticas y prácticas discriminatorias por origen, género, edad o discapacidad."
+            },
+            {
+                sdg: 6,
+                diff: "Avanzado",
+                q: "¿Qué ocurre cuando no existe saneamiento adecuado de aguas residuales (ODS 6)?",
+                options: [
+                    "Los ríos se limpian solos inmediatamente.",
+                    "Se propagan enfermedades graves y se contaminan ecosistemas acuáticos vitales.",
+                    "Aumenta la biodiversidad marina.",
+                    "No tiene impacto en la salud humana."
+                ],
+                correct: 1,
+                explanation: "El acceso a agua potable y saneamiento salva millones de vidas al evitar enfermedades infecciosas y proteger los ríos y acuíferos."
+            },
+            {
+                sdg: 7,
+                diff: "Desafío Espacial",
+                q: "¿Qué es la 'eficiencia energética' clave en el ODS 7?",
+                options: [
+                    "Dejar todas las luces encendidas para iluminar la calle.",
+                    "Obtener el mismo servicio o confort utilizando menor cantidad de energía.",
+                    "Usar electrodomésticos antiguos de alto consumo.",
+                    "Desconectar las centrales renovables."
+                ],
+                correct: 1,
+                explanation: "Mejorar la eficiencia energética (iluminación LED, aislamiento térmico, transporte eficiente) reduce emisiones y ahorra recursos."
+            },
+            {
+                sdg: 9,
+                diff: "Intermedio",
+                q: "¿Por qué es importante cerrar la brecha digital según el ODS 9?",
+                options: [
+                    "Para que toda la población tenga acceso igualitario a la información, el conocimiento y la innovación.",
+                    "Para vender más videojuegos únicamente.",
+                    "No tiene relevancia para el desarrollo sostenible.",
+                    "Para aumentar el consumo de papel."
+                ],
+                correct: 0,
+                explanation: "El acceso universal a internet y tecnologías de la información impulsa la educación, la telemedicina y el desarrollo económico sostenible."
+            },
+            {
+                sdg: 8,
+                diff: "Avanzado",
+                q: "¿Cómo apoya el turismo sostenible al ODS 8?",
+                options: [
+                    "Destruyendo playas y ecosistemas locales.",
+                    "Creando empleos locales dignos mientras promueve la cultura y protege el entorno natural.",
+                    "Agotando el agua potable de las comunidades.",
+                    "Excluyendo a los comercios locales."
+                ],
+                correct: 1,
+                explanation: "El ODS 8.9 impulsa un turismo sostenible que genera empleo local y respeta la cultura y biodiversidad del destino."
+            },
+            {
+                sdg: 10,
+                diff: "Avanzado",
+                q: "¿Qué implica la accesibilidad universal en ciudades y servicios (ODS 10)?",
+                options: [
+                    "Adaptar espacios, transporte y tecnologías para que las personas con discapacidad participen en igualdad de condiciones.",
+                    "Construir escaleras sin rampas ni ascensores.",
+                    "Limitar el acceso al transporte público.",
+                    "Diseñar aplicaciones imposibles de leer."
+                ],
+                correct: 0,
+                explanation: "La inclusión social y económica de todas las personas sin distinción es un pilar esencial del ODS 10."
+            }
+        ],
+
+        // MUNDO 3: EL AGUJERO NEGRO (ODS 11, 12, 13, 14, 15) - Escalones 15 a 21 (10 preguntas únicas)
+        3: [
+            {
+                sdg: 13,
+                diff: "Básico",
+                q: "¿Qué significa el ODS 13?",
+                options: [
+                    "Educación de calidad.",
+                    "Acción por el clima.",
+                    "Fin de la pobreza.",
+                    "Igualdad de género."
+                ],
+                correct: 1,
+                explanation: "El ODS 13 exige adoptar medidas urgentes para combatir el cambio climático y sus efectos mediante la reducción de emisiones y la adaptación."
+            },
+            {
+                sdg: 12,
+                diff: "Básico",
+                q: "¿Cuál es una forma efectiva de reducir el consumo de plástico (ODS 12)?",
+                options: [
+                    "Utilizar bolsas y botellas reutilizables.",
+                    "Comprar más productos envueltos en plásticos de un solo uso.",
+                    "Tirar los residuos al mar.",
+                    "Utilizar platos y cubiertos desechables a diario."
+                ],
+                correct: 0,
+                explanation: "Rechazar los plásticos de un solo uso y optar por envases reutilizables reduce drásticamente los residuos que contaminan tierra y océanos."
+            },
+            {
+                sdg: 11,
+                diff: "Intermedio",
+                q: "¿Cómo debe ser una ciudad sostenible según el ODS 11?",
+                options: [
+                    "Sin transporte público y llena de autopistas.",
+                    "Inclusiva, segura, resiliente, con transporte público limpio, zonas verdes y gestión adecuada de residuos.",
+                    "Con edificios sin aislamiento ni parques.",
+                    "Expandida destruyendo todos los espacios naturales cercanos."
+                ],
+                correct: 1,
+                explanation: "Más de la mitad de la humanidad vive en ciudades. El ODS 11 busca que sean espacios habitables, con aire limpio, vivienda digna y transporte sostenible."
+            },
+            {
+                sdg: 14,
+                diff: "Intermedio",
+                q: "¿Por qué es vital proteger los océanos según el ODS 14 (Vida submarina)?",
+                options: [
+                    "Porque producen más del 50% del oxígeno que respiramos y absorben gran parte del CO₂.",
+                    "Solo sirven para el transporte de mercancías.",
+                    "Porque no albergan biodiversidad relevante.",
+                    "Porque los microplásticos benefician a los peces."
+                ],
+                correct: 0,
+                explanation: "Los océanos regulan el clima global, generan oxígeno y son fuente de alimento para miles de millones de personas. Debemos frenar la sobrepesca y los plásticos."
+            },
+            {
+                sdg: 15,
+                diff: "Avanzado",
+                q: "¿Qué amenaza combate directamente el ODS 15 (Vida de ecosistemas terrestres)?",
+                options: [
+                    "La reforestación con especies autóctonas.",
+                    "La deforestación, la desertificación y la pérdida de biodiversidad.",
+                    "La creación de parques nacionales.",
+                    "La protección de especies en peligro de extinción."
+                ],
+                correct: 1,
+                explanation: "El ODS 15 protege los bosques, humedales y montañas, deteniendo la pérdida de biodiversidad y restaurando los suelos degradados."
+            },
+            {
+                sdg: 12,
+                diff: "Avanzado",
+                q: "¿En qué consiste la 'Economía Circular' vinculada al ODS 12?",
+                options: [
+                    "Extraer, fabricar, usar y tirar rápidamente.",
+                    "Diseñar productos para reparar, reutilizar, reciclar y reincorporar materiales reduciendo residuos al mínimo.",
+                    "Construir fábricas de forma redonda.",
+                    "Quemar toda la basura en vertederos."
+                ],
+                correct: 1,
+                explanation: "La economía circular imita a la naturaleza: nada se desperdicia, los materiales mantienen su valor el mayor tiempo posible y se regeneran los sistemas naturales."
+            },
+            {
+                sdg: 13,
+                diff: "Horizonte de Sucesos",
+                q: "¿Cuál es la principal causa humana del calentamiento global actual (ODS 13)?",
+                options: [
+                    "La quema de combustibles fósiles (carbón, petróleo y gas) que libera gases de efecto invernadero.",
+                    "La plantación de árboles en zonas urbanas.",
+                    "El uso de paneles solares en los tejados.",
+                    "El reciclaje de vidrio y aluminio."
+                ],
+                correct: 0,
+                explanation: "Las emisiones de CO₂ y metano procedentes de combustibles fósiles atrapan el calor en la atmósfera. Reducirlas es urgente para evitar el punto de no retorno."
+            },
+            {
+                sdg: 14,
+                diff: "Intermedio",
+                q: "¿Qué son los microplásticos que amenazan el ODS 14?",
+                options: [
+                    "Algas microscópicas beneficiosas.",
+                    "Fragmentos diminutos de plástico de menos de 5 mm que entran en la cadena alimentaria marina.",
+                    "Minerales naturales del fondo oceánico.",
+                    "Burbujas de oxígeno producidas por corales."
+                ],
+                correct: 1,
+                explanation: "Los plásticos no desaparecen: se fragmentan en microplásticos ingeridos por peces y aves marinas, afectando a todo el ecosistema."
+            },
+            {
+                sdg: 15,
+                diff: "Avanzado",
+                q: "¿Por qué son tan importantes los polinizadores como las abejas en el ODS 15?",
+                options: [
+                    "Porque más del 75% de los cultivos alimentarios del mundo dependen en parte de la polinización.",
+                    "Porque producen combustibles fósiles.",
+                    "No cumplen ninguna función en los ecosistemas.",
+                    "Porque sustituyen el agua de lluvia."
+                ],
+                correct: 0,
+                explanation: "Proteger a las abejas, mariposas y otros polinizadores garantiza la seguridad alimentaria y la salud de los ecosistemas terrestres."
+            },
+            {
+                sdg: 11,
+                diff: "Avanzado",
+                q: "¿Qué beneficio aportan los parques y bosques urbanos según el ODS 11?",
+                options: [
+                    "Reducen el efecto isla de calor, filtran contaminantes del aire y mejoran la salud física y mental.",
+                    "Aumentan la temperatura de las calles.",
+                    "Eliminan la biodiversidad local.",
+                    "Aumentan el ruido urbano."
+                ],
+                correct: 0,
+                explanation: "Las zonas verdes urbanas actúan como pulmones de las ciudades y refugios climáticos frente a las olas de calor."
+            }
+        ],
+
+        // MUNDO 4: UNA NUEVA DIMENSIÓN (ODS 16 y 17) - Escalones 22 a 28 (10 preguntas únicas)
+        4: [
+            {
+                sdg: 16,
+                diff: "Intermedio",
+                q: "¿Qué promueve el ODS 16: Paz, justicia e instituciones sólidas?",
+                options: [
+                    "Sociedades pacíficas e inclusivas, acceso a la justicia para todos e instituciones transparentes y eficaces.",
+                    "Resolver los conflictos mediante la fuerza.",
+                    "Ocultar la información pública a la ciudadanía.",
+                    "Limitar los derechos humanos fundamentales."
+                ],
+                correct: 0,
+                explanation: "Sin paz, estabilidad, derechos humanos y gobernabilidad efectiva basada en el Estado de derecho, el desarrollo sostenible es imposible."
+            },
+            {
+                sdg: 17,
+                diff: "Intermedio",
+                q: "¿Por qué el ODS 17 (Alianzas para lograr los objetivos) es la pieza que une toda la Agenda 2030?",
+                options: [
+                    "Porque cada país debe actuar aislado sin ayudar a otros.",
+                    "Porque los retos globales requieren cooperación entre gobiernos, empresas, ciencia y ciudadanía.",
+                    "Porque sustituye a los otros 16 objetivos.",
+                    "Porque solo involucra a los astronautas."
+                ],
+                correct: 1,
+                explanation: "Ningún país ni persona puede alcanzar los 17 ODS en solitario. El ODS 17 moviliza tecnología, financiación y cooperación internacional."
+            },
+            {
+                sdg: 16,
+                diff: "Avanzado",
+                q: "¿Por qué combatir la corrupción fortalece el ODS 16 y todos los demás ODS?",
+                options: [
+                    "Porque permite que los recursos públicos lleguen realmente a hospitales, escuelas y energías limpias.",
+                    "Porque aumenta los trámites burocráticos innecesarios.",
+                    "No afecta a los servicios públicos.",
+                    "Porque reduce la participación ciudadana."
+                ],
+                correct: 0,
+                explanation: "La transparencia y la rendición de cuentas aseguran que los fondos públicos se inviertan en el bienestar común y fortalecen la confianza social."
+            },
+            {
+                sdg: 17,
+                diff: "Avanzado",
+                q: "¿Cómo contribuye la transferencia de tecnología limpia entre países al ODS 17?",
+                options: [
+                    "Aumenta la dependencia de combustibles contaminantes.",
+                    "Permite que los países en desarrollo accedan a energías renovables, medicina e innovación sostenible.",
+                    "Frena el progreso científico mundial.",
+                    "Solo beneficia a una única empresa."
+                ],
+                correct: 1,
+                explanation: "Compartir conocimientos científicos y tecnologías sostenibles acelera la transición ecológica global sin dejar a nadie atrás."
+            },
+            {
+                sdg: 16,
+                diff: "Maestro ODS",
+                q: "¿Qué papel juega la participación ciudadana y juvenil en el ODS 16?",
+                options: [
+                    "Ninguno, las decisiones solo se toman sin escuchar a la sociedad.",
+                    "Es esencial para construir democracias inclusivas donde se escuche la voz de todas las generaciones.",
+                    "Sirve únicamente para redes sociales sin impacto real.",
+                    "Debilita las instituciones públicas."
+                ],
+                correct: 1,
+                explanation: "El ODS 16.7 impulsa la adopción de decisiones inclusivas, participativas y representativas en todos los niveles."
+            },
+            {
+                sdg: 17,
+                diff: "Maestro ODS",
+                q: "¿Qué significa el lema central de los 17 ODS: 'No dejar a nadie atrás'?",
+                options: [
+                    "Avanzar rápido aunque algunos grupos queden excluidos.",
+                    "Garantizar que los avances en desarrollo sostenible lleguen primero a las personas más vulnerables.",
+                    "Centrarse únicamente en las grandes capitales.",
+                    "Dejar los objetivos ambientales para el próximo siglo."
+                ],
+                correct: 1,
+                explanation: "'No dejar a nadie atrás' es el compromiso ético fundamental de la Agenda 2030: dignidad, igualdad y sostenibilidad para cada ser humano."
+            },
+            {
+                sdg: 17,
+                diff: "Cúspide del Futuro",
+                q: "Al completar los 17 ODS, ¿cuál es el papel de cada ciudadano en la construcción del futuro?",
+                options: [
+                    "Esperar a que otros solucionen todos los problemas.",
+                    "Actuar como agente de cambio mediante hábitos sostenibles, consumo responsable, empatía y compromiso cívico.",
+                    "Ignorar el impacto de nuestras decisiones diarias.",
+                    "Pensar que las pequeñas acciones no importan."
+                ],
+                correct: 1,
+                explanation: "Millones de pequeñas acciones cotidianas suman una transformación global imparable. ¡Tú eres protagonista del cambio!"
+            },
+            {
+                sdg: 16,
+                diff: "Avanzado",
+                q: "¿Qué documento mundial aprobado en 2015 estableció los 17 Objetivos de Desarrollo Sostenible?",
+                options: [
+                    "La Agenda 2030 para el Desarrollo Sostenible de la ONU.",
+                    "Un tratado comercial exclusivamente industrial.",
+                    "Una normativa espacial de 1960.",
+                    "Un manual de programación informática."
+                ],
+                correct: 0,
+                explanation: "En septiembre de 2015, 193 Estados miembros de la ONU aprobaron la Agenda 2030 como un plan de acción universal a favor de las personas, el planeta y la prosperidad."
+            },
+            {
+                sdg: 16,
+                diff: "Maestro ODS",
+                q: "¿Por qué el derecho a la identidad legal desde el nacimiento es clave en el ODS 16?",
+                options: [
+                    "Porque permite acceder a educación, salud, protección legal y derechos ciudadanos.",
+                    "Solo sirve para estadísticas sin utilidad práctica.",
+                    "Limita la movilidad de las personas.",
+                    "No tiene relación con los derechos humanos."
+                ],
+                correct: 0,
+                explanation: "El ODS 16.9 busca proporcionar acceso a una identidad jurídica para todos, especialmente el registro de nacimientos."
+            },
+            {
+                sdg: 17,
+                diff: "Cúspide del Futuro",
+                q: "¿Cómo ayudan los datos abiertos y la ciencia ciudadana al ODS 17?",
+                options: [
+                    "Permiten medir con transparencia los avances hacia los 17 ODS y tomar decisiones basadas en evidencias.",
+                    "Ocultan los problemas ambientales.",
+                    "Frenan la colaboración entre universidades.",
+                    "Reemplazan las acciones reales por gráficos."
+                ],
+                correct: 0,
+                explanation: "Contar con datos fiables, accesibles y desglosados es fundamental para evaluar el progreso real de la Agenda 2030."
+            }
+        ]
+    };
+
+    /**
+     * ============================================================================
+     * 3. MOTOR DE AUDIO SINTETIZADO (WEB AUDIO API - SIN ARCHIVOS EXTERNOS)
+     * ============================================================================
+     */
+    class SoundEngine {
+        constructor() {
+            this.ctx = null;
+            this.muted = false;
+            this.isPlayingMusic = false;
+            this.musicTimer = null;
+            this.currentWorld = 1;
+            this.stepIndex = 0;
+        }
+
+        init() {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+            }
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        }
+
+        toggleMute() {
+            this.muted = !this.muted;
+            document.getElementById('audio-icon').textContent = this.muted ? '🔇' : '🔊';
+            if (this.muted) {
+                this.stopAmbient();
+            } else if (this.isPlayingMusic) {
+                this.startAmbient(this.currentWorld);
+            }
+        }
+
+        // Tono sintetizado limpio con envolvente ADSR suave
+        playTone(freq, type = 'sine', duration = 0.3, gainVal = 0.15, delay = 0, slideTo = null) {
+            if (this.muted) return;
+            this.init();
+            const now = this.ctx.currentTime + delay;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (slideTo) {
+                osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+            }
+
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(gainVal, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + duration + 0.02);
+        }
+
+        // Sonido alegre al subir escalón (potenciado en modo Turbo x2)
+        playStepUp(isTurbo = false) {
+            const notes = isTurbo
+                ? [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]
+                : [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((n, i) => {
+                this.playTone(n, isTurbo ? 'sawtooth' : 'triangle', 0.28, isTurbo ? 0.13 : 0.16, i * 0.055);
+            });
+        }
+
+        // Sonido especial de curación / +1 Vida Extra (Racha de 15)
+        playExtraLife() {
+            const notes = [587.33, 739.99, 880.00, 1174.66, 1479.98];
+            notes.forEach((n, i) => {
+                this.playTone(n, 'sine', 0.38, 0.18, i * 0.07);
+                this.playTone(n * 1.5, 'triangle', 0.3, 0.09, i * 0.07 + 0.03);
+            });
+        }
+
+        // Sonido suave de error educativo
+        playWrong() {
+            this.playTone(311.13, 'sawtooth', 0.25, 0.09, 0, 277.18);
+            this.playTone(233.08, 'triangle', 0.42, 0.14, 0.12, 196.00);
+        }
+
+        // Sonido espectacular de transición dimensional / portal
+        playDimensionShift(worldNum) {
+            if (this.muted) return;
+            this.init();
+            // Barrido cósmico ascendente + acorde brillante
+            this.playTone(140, 'sine', 1.4, 0.18, 0, 880);
+            this.playTone(210, 'triangle', 1.4, 0.12, 0.05, 1320);
+            const chord = worldNum === 3 ? [220, 261.63, 329.63, 440] : [440, 554.37, 659.25, 880];
+            chord.forEach((freq, idx) => {
+                this.playTone(freq, 'sine', 1.1, 0.11, 0.35 + idx * 0.08);
+            });
+        }
+
+        // Fanfarria final de victoria
+        playVictoryFanfare() {
+            const melody = [
+                { f: 523.25, d: 0.18, t: 0.0 },
+                { f: 523.25, d: 0.18, t: 0.18 },
+                { f: 523.25, d: 0.18, t: 0.36 },
+                { f: 659.25, d: 0.45, t: 0.54 },
+                { f: 587.33, d: 0.25, t: 1.02 },
+                { f: 659.25, d: 0.25, t: 1.28 },
+                { f: 783.99, d: 0.85, t: 1.55 },
+                { f: 1046.50, d: 1.1, t: 1.65 }
+            ];
+            melody.forEach(m => {
+                this.playTone(m.f, 'triangle', m.d, 0.18, m.t);
+                this.playTone(m.f * 0.5, 'sine', m.d, 0.12, m.t);
+            });
+        }
+
+        // Música ambiental generativa adaptada a cada mundo
+        startAmbient(worldNum) {
+            this.currentWorld = worldNum;
+            this.isPlayingMusic = true;
+            this.stopAmbient();
+            if (this.muted) return;
+            this.init();
+
+            const scales = {
+                1: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25], // Tierra: Pentatónica Mayor cálida
+                2: [293.66, 349.23, 440.00, 523.25, 659.25, 783.99], // Espacio: Etérea cósmica
+                3: [146.83, 174.61, 207.65, 220.00, 261.63, 293.66], // Agujero Negro: Profunda misteriosa
+                4: [329.63, 392.00, 493.88, 587.33, 659.25, 783.99]  // Nueva Dimensión: Armonía futurista luminosa
+            };
+
+            const waveTypes = { 1: 'sine', 2: 'triangle', 3: 'sine', 4: 'sine' };
+            const tempos = { 1: 1400, 2: 1600, 3: 1800, 4: 1200 };
+
+            const playNextPad = () => {
+                if (this.muted || !this.isPlayingMusic) return;
+                const scale = scales[this.currentWorld] || scales[1];
+                const note1 = scale[this.stepIndex % scale.length];
+                const note2 = scale[(this.stepIndex + 2) % scale.length];
+                this.stepIndex++;
+
+                this.playTone(note1, waveTypes[this.currentWorld], 2.2, 0.045, 0);
+                if (this.stepIndex % 2 === 0) {
+                    this.playTone(note2 * 0.5, 'sine', 2.8, 0.04, 0.2);
+                }
+            };
+
+            playNextPad();
+            this.musicTimer = setInterval(playNextPad, tempos[worldNum] || 1500);
+        }
+
+        stopAmbient() {
+            if (this.musicTimer) {
+                clearInterval(this.musicTimer);
+                this.musicTimer = null;
+            }
+        }
+    }
+
+    const sound = new SoundEngine();
+    function toggleAudio() {
+        sound.toggleMute();
+    }
+
+    /**
+     * ============================================================================
+     * 4. ESTADO DEL JUEGO Y LÓGICA DE PROGRESIÓN
+     * ============================================================================
+     */
+    const TOTAL_STEPS = 28;
+    const STEPS_PER_WORLD = 7;
+
+    let gameState = {
+        screen: 'start', // 'start', 'playing', 'transition', 'victory', 'gameover'
+        currentStep: 0,  // 0 = base, 1..28 = escalones conquistados
+        lives: 3,
+        maxLives: 5,     // Permite ganar vidas extra hasta 5 con rachas de 15
+        correctAnswers: 0,
+        streak: 0,       // Racha actual de aciertos consecutivos
+        bestStreak: 0,   // Mejor racha de la partida
+        currentWorld: 1,
+        questionQueues: {},
+        usedQuestions: { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() },
+        currentQuestion: null,
+        isAnswering: false,
+        vortexAbsorption: 0 // 0 a 1 para animación especial del Agujero Negro
+    };
+
+    // Inicializar colas de preguntas únicas por mundo
+    function buildQuestionQueues() {
+        gameState.usedQuestions = { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() };
+        gameState.questionQueues = {
+            1: [...QUESTION_BANK[1]],
+            2: [...QUESTION_BANK[2]],
+            3: [...QUESTION_BANK[3]],
+            4: [...QUESTION_BANK[4]]
+        };
+    }
+
+    function getWorldForStep(step) {
+        if (step < 7) return 1;
+        if (step < 14) return 2;
+        if (step < 21) return 3;
+        return 4;
+    }
+
+    /**
+     * ============================================================================
+     * 5. RENDERIZADO VISUAL EN HTML5 CANVAS (4 MUNDOS, ESCALERA 28 ESCALONES,
+     *    PERSONAJE EXPLORADOR ANIMADO, PARTÍCULAS Y EFECTOS DIMENSIONALES)
+     * ============================================================================
+     */
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Generación de los 28 escalones con su ODS asociado
+    const STAIR_STEPS = [];
+    function generateStairsMetadata() {
+        STAIR_STEPS.length = 0;
+        for (let i = 1; i <= TOTAL_STEPS; i++) {
+            const worldIdx = Math.ceil(i / STEPS_PER_WORLD);
+            const qList = QUESTION_BANK[worldIdx];
+            const qItem = qList[(i - 1) % STEPS_PER_WORLD];
+            const sdgNum = qItem ? qItem.sdg : ((i - 1) % 17) + 1;
+            STAIR_STEPS.push({
+                index: i,
+                world: worldIdx,
+                sdg: sdgNum,
+                color: SDG_DATA[sdgNum].color,
+                name: SDG_DATA[sdgNum].name
+            });
+        }
+    }
+    generateStairsMetadata();
+
+    // Elementos decorativos ambientales pre-generados
+    const stars = Array.from({ length: 130 }, () => ({
+        x: Math.random(),
+        y: Math.random(),
+        size: Math.random() * 2.2 + 0.5,
+        twinkle: Math.random() * Math.PI * 2,
+        speed: Math.random() * 0.03 + 0.01
+    }));
+
+    const clouds = Array.from({ length: 7 }, (_, i) => ({
+        x: i * 0.18,
+        y: 0.12 + (i % 3) * 0.09,
+        scale: 0.7 + (i % 3) * 0.3,
+        speed: 0.008 + (i % 2) * 0.005
+    }));
+
+    const birds = Array.from({ length: 5 }, (_, i) => ({
+        x: 0.1 + i * 0.2,
+        y: 0.18 + (i % 2) * 0.08,
+        phase: i * 1.3
+    }));
+
+    // Sistema de partículas de celebración
+    let particles = [];
+    function spawnCelebrationParticles(x, y, baseColor, count = 42) {
+        const sdgColors = Object.values(SDG_DATA).map(s => s.color);
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 6.5 + 2.5;
+            particles.push({
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 3.5,
+                size: Math.random() * 6 + 3,
+                color: i % 3 === 0 ? baseColor : sdgColors[Math.floor(Math.random() * sdgColors.length)],
+                alpha: 1,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.2,
+                shape: i % 2 === 0 ? 'star' : 'rect'
+            });
+        }
+    }
+
+    // Estado animado de cámara y personaje
+    const visualState = {
+        camStep: 0,       // Posición suavizada de la cámara (0..28)
+        charStep: 0,      // Posición suavizada del personaje (0..28)
+        jumpArc: 0,       // Altura de salto al avanzar
+        isDoubleJump: false,
+        flashAlpha: 0,    // Destello dimensional
+        flashColor: '#ffffff',
+        time: 0
+    };
+
+    function triggerStepAnimation(targetStep, stepsGained = 1) {
+        visualState.jumpArc = 1;
+        visualState.isDoubleJump = stepsGained > 1;
+        const pos = getStepScreenCoords(targetStep, visualState.camStep);
+        const stepInfo = STAIR_STEPS[targetStep - 1];
+        const color = stepsGained > 1 ? '#facc15' : (stepInfo ? stepInfo.color : '#26BDE2');
+        spawnCelebrationParticles(pos.x, pos.y - 25, color, stepsGained > 1 ? 68 : 42);
+    }
+
+    // Coordenadas isométricas/diagonales elegantes en pantalla para cada escalón
+    function getStepScreenCoords(stepIdx, camStep) {
+        // En pantallas anchas situamos la escalera ligeramente a la izquierda para no chocar con la tarjeta de pregunta
+        const isDesktop = width >= 1024;
+        const anchorX = isDesktop ? width * 0.27 : width * 0.36;
+        const anchorY = isDesktop ? height * 0.66 : height * 0.44;
+
+        const stepWidth = isDesktop ? 64 : 48;
+        const stepHeight = isDesktop ? 44 : 34;
+
+        const diff = stepIdx - camStep;
+        return {
+            x: anchorX + diff * stepWidth,
+            y: anchorY - diff * stepHeight,
+            w: stepWidth + 14,
+            h: 22
+        };
+    }
+
+    // Dibujo de fondo según el mundo actual
+    function drawWorldBackground(world, t) {
+        if (world === 1) {
+            // ===== MUNDO 1: LA TIERRA (Cielo limpio, nubes, montañas verdes, molinos eólicos, río) =====
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+            skyGrad.addColorStop(0, '#0ea5e9');
+            skyGrad.addColorStop(0.55, '#7dd3fc');
+            skyGrad.addColorStop(1, '#dcfce7');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Sol radiante
+            const sunX = width * 0.14;
+            const sunY = height * 0.16;
+            const sunGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 110);
+            sunGlow.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+            sunGlow.addColorStop(0.4, 'rgba(253, 224, 71, 0.4)');
+            sunGlow.addColorStop(1, 'rgba(253, 224, 71, 0)');
+            ctx.fillStyle = sunGlow;
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, 110, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nubes suaves en movimiento
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            clouds.forEach(c => {
+                const cx = ((c.x + t * c.speed) % 1.2 - 0.1) * width;
+                const cy = c.y * height;
+                const s = c.scale * 28;
+                ctx.beginPath();
+                ctx.arc(cx, cy, s, 0, Math.PI * 2);
+                ctx.arc(cx + s * 0.85, cy - s * 0.2, s * 0.8, 0, Math.PI * 2);
+                ctx.arc(cx + s * 1.6, cy, s * 0.75, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Pájaros volando
+            ctx.strokeStyle = '#0369a1';
+            ctx.lineWidth = 2;
+            birds.forEach(b => {
+                const bx = ((b.x + t * 0.025) % 1.1) * width;
+                const by = b.y * height + Math.sin(t * 2 + b.phase) * 8;
+                const flap = Math.sin(t * 7 + b.phase) * 5;
+                ctx.beginPath();
+                ctx.moveTo(bx - 8, by + flap);
+                ctx.quadraticCurveTo(bx - 4, by - 4, bx, by);
+                ctx.quadraticCurveTo(bx + 4, by - 4, bx + 8, by + flap);
+                ctx.stroke();
+            });
+
+            // Montañas lejanas (Parallax)
+            const parallax = visualState.camStep * 12;
+            ctx.fillStyle = '#34d399';
+            ctx.beginPath();
+            ctx.moveTo(0, height);
+            for (let x = 0; x <= width + 100; x += 80) {
+                const mh = Math.sin((x + parallax * 0.4) * 0.005) * 65 + Math.cos((x + parallax * 0.4) * 0.011) * 35;
+                ctx.lineTo(x, height * 0.65 - mh);
+            }
+            ctx.lineTo(width, height);
+            ctx.fill();
+
+            // Colinas verdes cercanas
+            ctx.fillStyle = '#16a34a';
+            ctx.beginPath();
+            ctx.moveTo(0, height);
+            for (let x = 0; x <= width + 100; x += 60) {
+                const mh = Math.sin((x + parallax) * 0.007 + 1) * 45;
+                ctx.lineTo(x, height * 0.76 - mh);
+            }
+            ctx.lineTo(width, height);
+            ctx.fill();
+
+            // Molinos de viento sostenibles en las colinas
+            [0.18, 0.48, 0.82].forEach((posRatio, idx) => {
+                const wx = ((posRatio * width - parallax * 0.8) % width + width) % width;
+                const wy = height * 0.72;
+                // Torre
+                ctx.strokeStyle = '#f8fafc';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(wx, wy);
+                ctx.lineTo(wx, wy - 65);
+                ctx.stroke();
+                // Aspas girando
+                ctx.save();
+                ctx.translate(wx, wy - 65);
+                ctx.rotate(t * 1.8 + idx);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2.5;
+                for (let a = 0; a < 3; a++) {
+                    ctx.rotate((Math.PI * 2) / 3);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(0, -26);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            });
+
+            // Río limpio serpenteante
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.moveTo(0, height * 0.88);
+            ctx.bezierCurveTo(width * 0.3, height * 0.82, width * 0.6, height * 0.95, width, height * 0.86);
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.fill();
+
+        } else if (world === 2) {
+            // ===== MUNDO 2: EL ESPACIO (Nebulosas, estrellas, planetas con anillos) =====
+            const spaceGrad = ctx.createLinearGradient(0, 0, width, height);
+            spaceGrad.addColorStop(0, '#040714');
+            spaceGrad.addColorStop(0.5, '#0f172a');
+            spaceGrad.addColorStop(1, '#1e1b4b');
+            ctx.fillStyle = spaceGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Nebulosa colorida
+            const neb = ctx.createRadialGradient(width * 0.65, height * 0.3, 20, width * 0.65, height * 0.3, width * 0.45);
+            neb.addColorStop(0, 'rgba(38, 189, 226, 0.25)');
+            neb.addColorStop(0.5, 'rgba(139, 92, 246, 0.14)');
+            neb.addColorStop(1, 'rgba(15, 23, 42, 0)');
+            ctx.fillStyle = neb;
+            ctx.fillRect(0, 0, width, height);
+
+            // Estrellas titilantes
+            stars.forEach(s => {
+                const alpha = 0.4 + Math.sin(t * 3 + s.twinkle) * 0.45;
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(s.x * width, s.y * height, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Planeta gigante con anillos (estilo Saturno eco-futurista)
+            const px = width * 0.76;
+            const py = height * 0.24;
+            const pGrad = ctx.createRadialGradient(px - 15, py - 15, 8, px, py, 54);
+            pGrad.addColorStop(0, '#38bdf8');
+            pGrad.addColorStop(0.6, '#0284c7');
+            pGrad.addColorStop(1, '#1e1b4b');
+            ctx.fillStyle = pGrad;
+            ctx.beginPath();
+            ctx.arc(px, py, 52, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Anillo planetario
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.rotate(-0.35);
+            ctx.strokeStyle = 'rgba(252, 195, 11, 0.65)';
+            ctx.lineWidth = 7;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 95, 20, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            // Planeta pequeño verde/dorado
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(width * 0.16, height * 0.28, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+        } else if (world === 3) {
+            // ===== MUNDO 3: EL AGUJERO NEGRO (Horizonte de sucesos giratorio, disco de acreción) =====
+            ctx.fillStyle = '#05030a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Estrellas estiradas hacia el centro gravitacional
+            const bhX = width * 0.56;
+            const bhY = height * 0.34;
+
+            stars.forEach(s => {
+                const sx = s.x * width;
+                const sy = s.y * height;
+                ctx.fillStyle = 'rgba(255, 220, 180, 0.5)';
+                ctx.beginPath();
+                ctx.arc(sx, sy, s.size * 0.9, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Halo externo del disco de acreción
+            const bhRadius = Math.min(width, height) * 0.14;
+            const accretionGlow = ctx.createRadialGradient(bhX, bhY, bhRadius * 0.8, bhX, bhY, bhRadius * 3.1);
+            accretionGlow.addColorStop(0, 'rgba(253, 157, 36, 0.95)');
+            accretionGlow.addColorStop(0.25, 'rgba(229, 36, 59, 0.55)');
+            accretionGlow.addColorStop(0.55, 'rgba(126, 34, 206, 0.25)');
+            accretionGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = accretionGlow;
+            ctx.beginPath();
+            ctx.arc(bhX, bhY, bhRadius * 3.1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Espirales de materia siendo absorbida
+            ctx.save();
+            ctx.translate(bhX, bhY);
+            ctx.rotate(t * 0.9);
+            for (let i = 0; i < 6; i++) {
+                ctx.rotate(Math.PI / 3);
+                ctx.strokeStyle = i % 2 === 0 ? 'rgba(253, 186, 116, 0.55)' : 'rgba(244, 63, 94, 0.45)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, bhRadius * (1.25 + i * 0.14), 0.2, 2.3);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // Anillo inclinado luminoso
+            ctx.save();
+            ctx.translate(bhX, bhY);
+            ctx.rotate(-0.22);
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, bhRadius * 2.35, bhRadius * 0.48, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            // Núcleo negro absoluto (Singularidad)
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(bhX, bhY, bhRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fb923c';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+        } else {
+            // ===== MUNDO 4: UNA NUEVA DIMENSIÓN (Universo utópico, auroras, geometría sagrada) =====
+            const utopicGrad = ctx.createLinearGradient(0, 0, width, height);
+            utopicGrad.addColorStop(0, '#042f2e');
+            utopicGrad.addColorStop(0.45, '#1e1b4b');
+            utopicGrad.addColorStop(1, '#3b0764');
+            ctx.fillStyle = utopicGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Auroras boreales ondulantes
+            for (let layer = 0; layer < 3; layer++) {
+                const auroraGrad = ctx.createLinearGradient(0, height * 0.1, width, height * 0.5);
+                auroraGrad.addColorStop(0, 'rgba(52, 211, 153, 0.22)');
+                auroraGrad.addColorStop(0.5, 'rgba(38, 189, 226, 0.26)');
+                auroraGrad.addColorStop(1, 'rgba(232, 121, 249, 0.2)');
+                ctx.fillStyle = auroraGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(0, height * 0.45);
+                for (let x = 0; x <= width; x += 60) {
+                    const y = height * (0.22 + layer * 0.07) + Math.sin(x * 0.006 + t * 1.5 + layer) * 35;
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(width, 0);
+                ctx.lineTo(0, 0);
+                ctx.fill();
+            }
+
+            // Geometría sagrada / Mandala cósmico de los 17 colores ODS
+            const cx = width * 0.55;
+            const cy = height * 0.32;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(t * 0.25);
+            const sdgList = Object.values(SDG_DATA);
+            sdgList.forEach((sdg, idx) => {
+                const ang = (idx / 17) * Math.PI * 2;
+                const rx = Math.cos(ang) * 115;
+                const ry = Math.sin(ang) * 115;
+                ctx.fillStyle = sdg.color;
+                ctx.globalAlpha = 0.75;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(rx, ry);
+                ctx.stroke();
+            });
+            ctx.restore();
+            ctx.globalAlpha = 1;
+
+            // Estrellas brillantes
+            stars.forEach(s => {
+                ctx.fillStyle = 'rgba(255,255,255,0.75)';
+                ctx.beginPath();
+                ctx.arc(s.x * width, s.y * height, s.size * 1.1, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+    }
+
+    // Dibujo de la Escalera Ascendente de 28 Escalones
+    function drawStaircase(camStep, t) {
+        // Plataforma inicial (Escalón 0)
+        const basePos = getStepScreenCoords(0, camStep);
+        if (basePos.x > -150 && basePos.x < width + 150) {
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.roundRect(basePos.x - 45, basePos.y, 90, 24, 10);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 11px Outfit, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('INICIO', basePos.x, basePos.y + 15);
+        }
+
+        // Dibujar los 28 escalones
+        for (let i = 1; i <= TOTAL_STEPS; i++) {
+            const pos = getStepScreenCoords(i, camStep);
+            if (pos.x < -120 || pos.x > width + 120 || pos.y < -100 || pos.y > height + 120) continue;
+
+            const stepData = STAIR_STEPS[i - 1];
+            const isConquered = i <= gameState.currentStep;
+            const isNext = i === gameState.currentStep + 1;
+
+            // Pilar energético vertical sutil debajo del escalón
+            const pillarGrad = ctx.createLinearGradient(pos.x, pos.y, pos.x, pos.y + 110);
+            pillarGrad.addColorStop(0, stepData.color + (isConquered ? '88' : '33'));
+            pillarGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = pillarGrad;
+            ctx.fillRect(pos.x - pos.w * 0.35, pos.y + 10, pos.w * 0.7, 100);
+
+            // Halo pulsante en el siguiente escalón objetivo
+            if (isNext) {
+                const pulse = Math.sin(t * 5) * 4 + 6;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(pos.x - pos.w / 2 - pulse / 2, pos.y - pulse / 2, pos.w + pulse, pos.h + pulse, 12);
+                ctx.stroke();
+            }
+
+            // Cuerpo principal del escalón con el color oficial del ODS
+            ctx.fillStyle = isConquered ? stepData.color : (isNext ? stepData.color : stepData.color + 'AA');
+            ctx.beginPath();
+            ctx.roundRect(pos.x - pos.w / 2, pos.y, pos.w, pos.h, 9);
+            ctx.fill();
+
+            // Brillo superior 3D
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.32)';
+            ctx.beginPath();
+            ctx.roundRect(pos.x - pos.w / 2 + 2, pos.y + 2, pos.w - 4, 6, 5);
+            ctx.fill();
+
+            // Borde
+            ctx.strokeStyle = isConquered ? '#ffffff' : 'rgba(255,255,255,0.45)';
+            ctx.lineWidth = isConquered ? 2 : 1.2;
+            ctx.beginPath();
+            ctx.roundRect(pos.x - pos.w / 2, pos.y, pos.w, pos.h, 9);
+            ctx.stroke();
+
+            // Número de ODS en el escalón
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px Fredoka, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`ODS ${stepData.sdg}`, pos.x, pos.y + 15);
+
+            // Marcador de cambio de mundo cada 7 escalones
+            if (i % STEPS_PER_WORLD === 0 && i < TOTAL_STEPS) {
+                const portalIcons = { 7: '🚀', 14: '🕳️', 21: '🌌' };
+                ctx.font = '20px sans-serif';
+                ctx.fillText(portalIcons[i] || '✨', pos.x, pos.y - 12 + Math.sin(t * 4) * 4);
+            }
+        }
+    }
+
+    // Dibujo del Personaje Explorador Eco-Futurista Animado
+    function drawCharacter(charStep, camStep, t) {
+        const pos = getStepScreenCoords(charStep, camStep);
+        const bounce = Math.abs(Math.sin(t * 4.5)) * 4;
+        const jumpPeak = visualState.isDoubleJump ? 56 : 38;
+        const jumpHeight = Math.sin(visualState.jumpArc * Math.PI) * jumpPeak;
+
+        let cx = pos.x;
+        let cy = pos.y - 4 - bounce - jumpHeight;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // Si está siendo absorbido por el agujero negro al terminar el Mundo 3
+        if (gameState.vortexAbsorption > 0) {
+            const bhX = width * 0.56;
+            const bhY = height * 0.34;
+            const lerpX = (bhX - cx) * gameState.vortexAbsorption;
+            const lerpY = (bhY - cy) * gameState.vortexAbsorption;
+            ctx.translate(lerpX, lerpY);
+            ctx.rotate(gameState.vortexAbsorption * Math.PI * 6);
+            const scale = Math.max(0.05, 1 - gameState.vortexAbsorption * 0.9);
+            ctx.scale(scale, scale);
+        }
+
+        // Aura brillante dorada cuando Racha >= 10 (Modo TURBO x2)
+        if (gameState.streak >= 10 && gameState.vortexAbsorption === 0) {
+            const auraRadius = 38 + Math.sin(t * 8) * 5;
+            const auraGrad = ctx.createRadialGradient(0, -24, 6, 0, -24, auraRadius);
+            auraGrad.addColorStop(0, 'rgba(253, 224, 71, 0.55)');
+            auraGrad.addColorStop(0.6, 'rgba(249, 115, 22, 0.25)');
+            auraGrad.addColorStop(1, 'rgba(250, 204, 21, 0)');
+            ctx.fillStyle = auraGrad;
+            ctx.beginPath();
+            ctx.arc(0, -24, auraRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Anillo energético giratorio
+            ctx.strokeStyle = 'rgba(253, 224, 71, 0.85)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(0, -2, 22 + Math.sin(t * 6) * 3, 7, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Sombra sobre el escalón
+        if (gameState.vortexAbsorption === 0) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+            ctx.beginPath();
+            ctx.ellipse(0, 4 + bounce + jumpHeight, Math.max(6, 16 - jumpHeight * 0.15), 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Capa ondeante (dorada en modo Turbo x2, eco-turquesa en modo normal)
+        const capeWave = Math.sin(t * 8) * 5;
+        ctx.fillStyle = gameState.streak >= 10 ? '#facc15' : '#00c6ff';
+        ctx.beginPath();
+        ctx.moveTo(-6, -24);
+        ctx.quadraticCurveTo(-22, -16 + capeWave, -24, -4 + capeWave);
+        ctx.lineTo(-8, -8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Propulsor / Mochila solar
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.roundRect(-13, -27, 7, 15, 3);
+        ctx.fill();
+
+        // Piernas animadas
+        const legSwing = visualState.jumpArc > 0.05 ? 5 : Math.sin(t * 4.5) * 2;
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 4.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-4, -10);
+        ctx.lineTo(-5 - legSwing, 0);
+        ctx.moveTo(4, -10);
+        ctx.lineTo(5 + legSwing, 0);
+        ctx.stroke();
+
+        // Cuerpo / Traje espacial sostenible blanco y verde
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.roundRect(-10, -28, 20, 19, 8);
+        ctx.fill();
+        ctx.strokeStyle = '#56C02B';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Emblema ODS en el pecho
+        ctx.fillStyle = '#26BDE2';
+        ctx.beginPath();
+        ctx.arc(0, -19, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cabeza / Casco transparente luminoso
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, -37, 12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Visor espacial
+        const visorGrad = ctx.createLinearGradient(-8, -42, 10, -32);
+        visorGrad.addColorStop(0, '#0284c7');
+        visorGrad.addColorStop(1, '#38bdf8');
+        ctx.fillStyle = visorGrad;
+        ctx.beginPath();
+        ctx.roundRect(-6, -42, 15, 10, 5);
+        ctx.fill();
+
+        // Brillo del visor
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.beginPath();
+        ctx.ellipse(2, -39, 4, 1.8, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Antena con hoja verde de esperanza
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -49);
+        ctx.lineTo(0, -56);
+        ctx.stroke();
+
+        ctx.fillStyle = '#56C02B';
+        ctx.beginPath();
+        ctx.ellipse(4, -57, 5, 2.5, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // Escena final de Victoria (Planeta Sostenible con los 17 ODS orbitando)
+    function drawVictoryPlanet(t) {
+        const cx = width * 0.5;
+        const cy = height * 0.45;
+        const radius = Math.min(width, height) * 0.19;
+
+        // Fondo cósmico luminoso
+        const bg = ctx.createRadialGradient(cx, cy, 20, cx, cy, Math.max(width, height) * 0.7);
+        bg.addColorStop(0, '#064e3b');
+        bg.addColorStop(0.5, '#0f172a');
+        bg.addColorStop(1, '#020617');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, width, height);
+
+        // Atmósfera brillante
+        const atmo = ctx.createRadialGradient(cx, cy, radius * 0.9, cx, cy, radius * 1.45);
+        atmo.addColorStop(0, 'rgba(56, 189, 248, 0.55)');
+        atmo.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        ctx.fillStyle = atmo;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 1.45, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Océano limpio
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Continentes verdes exuberantes
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.clip();
+
+        ctx.fillStyle = '#22c55e';
+        const shift = (t * 22) % (radius * 2);
+        ctx.beginPath();
+        ctx.arc(cx - radius * 0.4 + shift * 0.3, cy - radius * 0.2, radius * 0.48, 0, Math.PI * 2);
+        ctx.arc(cx + radius * 0.35 + shift * 0.2, cy + radius * 0.25, radius * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Órbita de los 17 colores/orbes oficiales de los ODS
+        const sdgs = Object.values(SDG_DATA);
+        sdgs.forEach((sdg, idx) => {
+            const angle = t * 0.6 + (idx / 17) * Math.PI * 2;
+            const ox = cx + Math.cos(angle) * (radius * 1.55);
+            const oy = cy + Math.sin(angle) * (radius * 0.72);
+
+            ctx.fillStyle = sdg.color;
+            ctx.beginPath();
+            ctx.arc(ox, oy, 13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 9px Fredoka, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(sdg.num, ox, oy + 3);
+        });
+
+        // Lanzar fuegos artificiales periódicos
+        if (Math.random() < 0.05) {
+            spawnCelebrationParticles(
+                width * (0.2 + Math.random() * 0.6),
+                height * (0.15 + Math.random() * 0.5),
+                '#56C02B'
+            );
+        }
+    }
+
+    // Actualización y renderizado de partículas
+    function updateAndDrawParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.14; // Gravedad suave
+            p.alpha -= 0.016;
+            p.rotation += p.rotSpeed;
+
+            if (p.alpha <= 0) {
+                particles.splice(i, 1);
+                continue;
+            }
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.restore();
+        }
+    }
+
+    // Bucle principal de animación a 60 FPS
+    let lastTimestamp = 0;
+    function gameLoop(timestamp) {
+        const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+        lastTimestamp = timestamp;
+        visualState.time += dt;
+
+        // Interpolación suave de cámara y personaje
+        visualState.camStep += (gameState.currentStep - visualState.camStep) * 0.07;
+        visualState.charStep += (gameState.currentStep - visualState.charStep) * 0.14;
+
+        if (visualState.jumpArc > 0) {
+            visualState.jumpArc = Math.max(0, visualState.jumpArc - dt * 2.4);
+        }
+
+        ctx.clearRect(0, 0, width, height);
+
+        if (gameState.screen === 'victory') {
+            drawVictoryPlanet(visualState.time);
+        } else {
+            drawWorldBackground(gameState.currentWorld, visualState.time);
+            drawStaircase(visualState.camStep, visualState.time);
+            drawCharacter(visualState.charStep, visualState.camStep, visualState.time);
+        }
+
+        updateAndDrawParticles();
+
+        // Destello dimensional al cambiar de mundo
+        if (visualState.flashAlpha > 0) {
+            ctx.fillStyle = visualState.flashColor;
+            ctx.globalAlpha = visualState.flashAlpha;
+            ctx.fillRect(0, 0, width, height);
+            ctx.globalAlpha = 1;
+            visualState.flashAlpha = Math.max(0, visualState.flashAlpha - dt * 1.3);
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    /**
+     * ============================================================================
+     * 6. CONTROLADORES DE INTERFAZ Y FLUJO DEL JUEGO
+     * ============================================================================
+     */
+    function buildStartWheelSVG() {
+        const svg = document.getElementById('sdg-wheel-svg');
+        const cx = 100, cy = 100, rOuter = 94, rInner = 46;
+        const total = 17;
+        let paths = '';
+
+        for (let i = 0; i < total; i++) {
+            const startAngle = (i * 2 * Math.PI) / total - Math.PI / 2;
+            const endAngle = ((i + 1) * 2 * Math.PI) / total - Math.PI / 2 - 0.03;
+
+            const x1 = cx + rOuter * Math.cos(startAngle);
+            const y1 = cy + rOuter * Math.sin(startAngle);
+            const x2 = cx + rOuter * Math.cos(endAngle);
+            const y2 = cy + rOuter * Math.sin(endAngle);
+
+            const x3 = cx + rInner * Math.cos(endAngle);
+            const y3 = cy + rInner * Math.sin(endAngle);
+            const x4 = cx + rInner * Math.cos(startAngle);
+            const y4 = cy + rInner * Math.sin(startAngle);
+
+            const color = SDG_DATA[i + 1].color;
+            paths += `<path d="M ${x1} ${y1} A ${rOuter} ${rOuter} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${rInner} ${rInner} 0 0 0 ${x4} ${y4} Z" fill="${color}" />`;
+        }
+        svg.innerHTML = paths;
+    }
+
+    function startGame() {
+        sound.init();
+        sound.playStepUp();
+        restartFullGame();
+    }
+
+    function restartFullGame() {
+        buildQuestionQueues();
+        gameState.screen = 'playing';
+        gameState.currentStep = 0;
+        gameState.lives = 3;
+        gameState.correctAnswers = 0;
+        gameState.streak = 0;
+        gameState.bestStreak = 0;
+        gameState.currentWorld = 1;
+        gameState.isAnswering = false;
+        gameState.vortexAbsorption = 0;
+
+        visualState.camStep = 0;
+        visualState.charStep = 0;
+        visualState.jumpArc = 0;
+
+        hideAllOverlays();
+        document.getElementById('hud-container').classList.remove('hidden');
+        document.getElementById('hud-container').classList.add('flex');
+        document.getElementById('question-panel').classList.remove('opacity-0', 'pointer-events-none');
+
+        sound.startAmbient(1);
+        updateHUD();
+        loadNextQuestion();
+    }
+
+    function retryCurrentWorld() {
+        // Reintentar desde el inicio del mundo actual
+        const worldStartStep = (gameState.currentWorld - 1) * STEPS_PER_WORLD;
+        gameState.screen = 'playing';
+        gameState.currentStep = worldStartStep;
+        gameState.lives = 3;
+        gameState.streak = 0;
+        gameState.isAnswering = false;
+        gameState.vortexAbsorption = 0;
+        gameState.questionQueues[gameState.currentWorld] = [...QUESTION_BANK[gameState.currentWorld]];
+
+        visualState.camStep = worldStartStep;
+        visualState.charStep = worldStartStep;
+
+        hideAllOverlays();
+        document.getElementById('hud-container').classList.remove('hidden');
+        document.getElementById('hud-container').classList.add('flex');
+        document.getElementById('question-panel').classList.remove('opacity-0', 'pointer-events-none');
+
+        sound.startAmbient(gameState.currentWorld);
+        updateHUD();
+        loadNextQuestion();
+    }
+
+    function hideAllOverlays() {
+        ['screen-start', 'modal-feedback', 'modal-world-transition', 'screen-gameover', 'screen-victory'].forEach(id => {
+            const el = document.getElementById(id);
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        });
+    }
+
+    function updateHUD() {
+        const worldObj = WORLDS[gameState.currentWorld - 1];
+        document.getElementById('hud-world-icon').textContent = worldObj.icon;
+        document.getElementById('hud-world-label').textContent = worldObj.subtitle;
+        document.getElementById('hud-world-name').textContent = worldObj.name;
+
+        document.getElementById('hud-step-text').textContent = `Escalón ${gameState.currentStep} / ${TOTAL_STEPS}`;
+        document.getElementById('hud-score-text').textContent = `Aciertos: ${gameState.correctAnswers}`;
+
+        const pct = (gameState.currentStep / TOTAL_STEPS) * 100;
+        document.getElementById('hud-progress-total').style.width = `${pct}%`;
+
+        // Puntos de los 7 escalones del mundo actual
+        const dotsContainer = document.getElementById('hud-world-dots');
+        const stepInWorld = gameState.currentStep % STEPS_PER_WORLD === 0 && gameState.currentStep > 0 && getWorldForStep(gameState.currentStep) !== gameState.currentWorld
+            ? 0
+            : gameState.currentStep - (gameState.currentWorld - 1) * STEPS_PER_WORLD;
+
+        let dotsHTML = '';
+        for (let i = 1; i <= STEPS_PER_WORLD; i++) {
+            const active = i <= stepInWorld;
+            dotsHTML += `<div class="h-1.5 flex-1 rounded-full transition-all duration-300 ${active ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-white/15'}"></div>`;
+        }
+        dotsContainer.innerHTML = dotsHTML;
+
+        // Actualizar Contador de Racha y Hitos (10 -> x2, 15 -> +1 Vida)
+        const streakBox = document.getElementById('hud-streak-box');
+        const streakIcon = document.getElementById('hud-streak-icon');
+        const streakText = document.getElementById('hud-streak-text');
+        const turboBadge = document.getElementById('hud-turbo-badge');
+        const streakGoal = document.getElementById('hud-streak-goal');
+
+        streakText.textContent = `Racha: ${gameState.streak}`;
+
+        if (gameState.streak >= 10) {
+            streakBox.classList.add('animate-turbo', 'border-amber-400/80', 'bg-amber-950/50');
+            streakBox.classList.remove('border-white/15');
+            streakIcon.textContent = '⚡';
+            turboBadge.classList.remove('hidden');
+
+            const nextLifeMilestone = (Math.floor(gameState.streak / 15) + 1) * 15;
+            const remainingForLife = nextLifeMilestone - gameState.streak;
+            streakGoal.textContent = `¡TURBO x2! Faltan ${remainingForLife} para +1❤️`;
+            streakGoal.className = 'text-[10px] text-amber-200 font-bold';
+        } else {
+            streakBox.classList.remove('animate-turbo', 'border-amber-400/80', 'bg-amber-950/50');
+            streakBox.classList.add('border-white/15');
+            streakIcon.textContent = gameState.streak > 0 ? '🔥' : '❄️';
+            turboBadge.classList.add('hidden');
+
+            const remainingForTurbo = 10 - gameState.streak;
+            streakGoal.textContent = gameState.streak === 0
+                ? '10 seguidas: x2 • 15: +1❤️'
+                : `Faltan ${remainingForTurbo} para Avance x2`;
+            streakGoal.className = 'text-[10px] text-amber-300/90 font-medium';
+        }
+
+        // Vidas (mostrando corazones activos y disponibles hasta maxLives)
+        const livesContainer = document.getElementById('hud-lives');
+        const displayMax = Math.max(3, gameState.lives);
+        let heartsHTML = '';
+        for (let i = 1; i <= displayMax; i++) {
+            const lost = i > gameState.lives;
+            heartsHTML += `<span class="heart-beat ${lost ? 'heart-lost' : ''}">❤️</span>`;
+        }
+        livesContainer.innerHTML = heartsHTML;
+    }
+
+    function loadNextQuestion() {
+        const w = gameState.currentWorld;
+        let queue = gameState.questionQueues[w];
+        if (!queue || queue.length === 0) {
+            gameState.questionQueues[w] = [...QUESTION_BANK[w]];
+            queue = gameState.questionQueues[w];
+        }
+
+        const qObj = queue.shift();
+        gameState.currentQuestion = qObj;
+        gameState.isAnswering = false;
+
+        const sdg = SDG_DATA[qObj.sdg];
+        const badge = document.getElementById('sdg-badge');
+        badge.style.backgroundColor = sdg.color;
+        document.getElementById('sdg-badge-num').textContent = `ODS ${sdg.num}`;
+        document.getElementById('sdg-badge-name').textContent = `${sdg.icon} ${sdg.name}`;
+
+        const nextStepNum = gameState.currentStep + 1;
+        const stepTag = gameState.streak >= 10 ? `Escalón ${nextStepNum} (⚡x2)` : `Escalón ${nextStepNum}`;
+        document.getElementById('question-difficulty').textContent = `${stepTag} • ${qObj.diff}`;
+        document.getElementById('question-text').textContent = qObj.q;
+
+        const letters = ['A', 'B', 'C', 'D'];
+        const optionsGrid = document.getElementById('options-grid');
+        optionsGrid.innerHTML = '';
+
+        qObj.options.forEach((optText, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn glass-light text-left p-3 sm:p-3.5 rounded-2xl flex items-start gap-3 cursor-pointer w-full border border-white/15';
+            btn.innerHTML = `
+                <span class="w-7 h-7 rounded-xl bg-white/15 font-display font-bold text-sm flex items-center justify-center shrink-0 text-cyan-200 mt-0.5">
+                    ${letters[idx]}
+                </span>
+                <span class="text-xs sm:text-sm font-medium text-white leading-snug">${optText}</span>
+            `;
+            btn.onclick = () => handleAnswer(idx, btn);
+            optionsGrid.appendChild(btn);
+        });
+    }
+
+    function showToast(emoji, text, isSuccess = true) {
+        const banner = document.getElementById('toast-banner');
+        const content = document.getElementById('toast-content');
+        document.getElementById('toast-emoji').textContent = emoji;
+        document.getElementById('toast-text').textContent = text;
+
+        content.style.borderColor = isSuccess ? 'rgba(52, 211, 153, 0.7)' : 'rgba(251, 113, 133, 0.7)';
+        banner.classList.remove('opacity-0', '-translate-y-2');
+        banner.classList.add('opacity-100', 'translate-y-0');
+
+        setTimeout(() => {
+            banner.classList.add('opacity-0', '-translate-y-2');
+            banner.classList.remove('opacity-100', 'translate-y-0');
+        }, 2300);
+    }
+
+    function handleAnswer(selectedIdx, btnElement) {
+        if (gameState.isAnswering) return;
+        gameState.isAnswering = true;
+
+        const qObj = gameState.currentQuestion;
+        const buttons = document.querySelectorAll('#options-grid button');
+        buttons.forEach(b => b.disabled = true);
+
+        if (selectedIdx === qObj.correct) {
+            // ===== RESPUESTA CORRECTA =====
+            btnElement.style.background = 'rgba(16, 185, 129, 0.45)';
+            btnElement.style.borderColor = '#34d399';
+
+            gameState.correctAnswers++;
+            gameState.streak++;
+            if (gameState.streak > gameState.bestStreak) {
+                gameState.bestStreak = gameState.streak;
+            }
+
+            // Calcular cuántos escalones sube (x2 si racha >= 10, respetando el límite del mundo actual)
+            const worldBoundaryStep = gameState.currentWorld * STEPS_PER_WORLD;
+            const stepsRemainingInWorld = worldBoundaryStep - gameState.currentStep;
+            const isTurboActive = gameState.streak >= 10;
+            const stepsToAdvance = isTurboActive ? Math.min(2, stepsRemainingInWorld) : 1;
+
+            gameState.currentStep += stepsToAdvance;
+
+            // Verificar Hito de 15 aciertos seguidos (+1 Vida Extra)
+            let gainedExtraLife = false;
+            if (gameState.streak > 0 && gameState.streak % 15 === 0) {
+                if (gameState.lives < gameState.maxLives) {
+                    gameState.lives++;
+                }
+                gainedExtraLife = true;
+            }
+
+            // Efectos sonoros y visuales según el hito alcanzado
+            if (gainedExtraLife) {
+                sound.playExtraLife();
+                visualState.flashColor = '#34d399';
+                visualState.flashAlpha = 0.45;
+            } else {
+                sound.playStepUp(isTurboActive);
+            }
+
+            triggerStepAnimation(gameState.currentStep, stepsToAdvance);
+            updateHUD();
+
+            // Mensaje emergente prioritario según racha
+            if (gainedExtraLife) {
+                showToast('💖', `¡RACHA DE ${gameState.streak}! +1 VIDA EXTRA Y AVANCE x2`, true);
+            } else if (gameState.streak === 10) {
+                showToast('⚡', '¡RACHA x10 ALCANZADA! MODO AVANCE x2 ACTIVADO', true);
+            } else if (isTurboActive && stepsToAdvance === 2) {
+                showToast('⚡', `¡TURBO x2 (Racha ${gameState.streak})! Subes 2 escalones de golpe`, true);
+            } else if (isTurboActive && stepsToAdvance === 1) {
+                showToast('⚡', `¡Racha ${gameState.streak}! Alcanzas el portal del mundo`, true);
+            } else {
+                const cheers = [
+                    '¡Brillante! Subes un escalón hacia el futuro',
+                    '¡Exacto! El planeta celebra tu acción',
+                    '¡Muy bien! Sigues avanzando en los ODS',
+                    '¡Genial! Un paso más hacia un mundo sostenible'
+                ];
+                showToast('✨', `${cheers[gameState.currentStep % cheers.length]} (Racha: ${gameState.streak})`, true);
+            }
+
+            // Comprobar si completó el juego (Escalón 28)
+            if (gameState.currentStep >= TOTAL_STEPS) {
+                setTimeout(() => {
+                    triggerVictory();
+                }, 1150);
+                return;
+            }
+
+            // Comprobar si desbloquea un nuevo mundo (cada 7 escalones)
+            if (gameState.currentStep % STEPS_PER_WORLD === 0) {
+                const nextWorldNum = gameState.currentWorld + 1;
+                setTimeout(() => {
+                    triggerWorldTransition(nextWorldNum);
+                }, 950);
+            } else {
+                setTimeout(() => {
+                    loadNextQuestion();
+                }, 900);
+            }
+
+        } else {
+            // ===== RESPUESTA INCORRECTA (REINICIO DE RACHA) =====
+            const hadTurbo = gameState.streak >= 10;
+            gameState.streak = 0;
+
+            btnElement.style.background = 'rgba(244, 63, 94, 0.45)';
+            btnElement.style.borderColor = '#fb7185';
+            if (buttons[qObj.correct]) {
+                buttons[qObj.correct].style.background = 'rgba(16, 185, 129, 0.35)';
+                buttons[qObj.correct].style.borderColor = '#34d399';
+            }
+
+            gameState.lives--;
+            sound.playWrong();
+            updateHUD();
+
+            if (hadTurbo) {
+                showToast('💔', '¡Racha reiniciada a 0! Se desactiva el Avance x2', false);
+            }
+
+            setTimeout(() => {
+                showEducationalFeedback(qObj);
+            }, 650);
+        }
+    }
+
+    function showEducationalFeedback(qObj) {
+        const sdg = SDG_DATA[qObj.sdg];
+        const letters = ['A', 'B', 'C', 'D'];
+
+        const tag = document.getElementById('feedback-sdg-tag');
+        tag.style.backgroundColor = sdg.color;
+        tag.textContent = `ODS ${sdg.num}: ${sdg.name}`;
+
+        document.getElementById('feedback-correct-answer').textContent = `${letters[qObj.correct]}) ${qObj.options[qObj.correct]}`;
+        document.getElementById('feedback-explanation').textContent = qObj.explanation;
+
+        const modal = document.getElementById('modal-feedback');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeFeedbackModal() {
+        const modal = document.getElementById('modal-feedback');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+
+        if (gameState.lives <= 0) {
+            triggerGameOver();
+        } else {
+            loadNextQuestion();
+        }
+    }
+
+    // Transiciones espectaculares entre mundos (incluida absorción por Agujero Negro en Mundo 3 -> 4)
+    function triggerWorldTransition(nextWorldNum) {
+        const qPanel = document.getElementById('question-panel');
+        qPanel.classList.add('opacity-0', 'pointer-events-none');
+        sound.playDimensionShift(nextWorldNum);
+
+        // Si venimos del Mundo 3 (Agujero Negro), animar absorción antes de saltar a la Nueva Dimensión
+        if (gameState.currentWorld === 3 && nextWorldNum === 4) {
+            showToast('🕳️', '¡El Agujero Negro absorbe al explorador hacia otra dimensión!', true);
+            let absorbProgress = 0;
+            const absorbInterval = setInterval(() => {
+                absorbProgress += 0.04;
+                gameState.vortexAbsorption = Math.min(1, absorbProgress);
+                if (absorbProgress >= 1) {
+                    clearInterval(absorbInterval);
+                    visualState.flashColor = '#ffffff';
+                    visualState.flashAlpha = 0.95;
+                    gameState.vortexAbsorption = 0;
+                    completeWorldSwitch(nextWorldNum);
+                }
+            }, 30);
+        } else {
+            visualState.flashColor = nextWorldNum === 2 ? '#38bdf8' : '#fd9d24';
+            visualState.flashAlpha = 0.75;
+            completeWorldSwitch(nextWorldNum);
+        }
+    }
+
+    function completeWorldSwitch(nextWorldNum) {
+        gameState.currentWorld = nextWorldNum;
+        sound.startAmbient(nextWorldNum);
+        updateHUD();
+
+        const wObj = WORLDS[nextWorldNum - 1];
+        document.getElementById('trans-icon').textContent = wObj.icon;
+        document.getElementById('trans-subtitle').textContent = `¡NUEVA DIMENSIÓN DESBLOQUEADA! • ${wObj.sdgs}`;
+        document.getElementById('trans-title').textContent = `MUNDO ${wObj.id}: ${wObj.name}`;
+        document.getElementById('trans-desc').textContent = wObj.desc;
+
+        const transModal = document.getElementById('modal-world-transition');
+        transModal.classList.remove('hidden');
+        transModal.classList.add('flex');
+
+        setTimeout(() => {
+            transModal.classList.add('hidden');
+            transModal.classList.remove('flex');
+            const qPanel = document.getElementById('question-panel');
+            qPanel.classList.remove('opacity-0', 'pointer-events-none');
+            loadNextQuestion();
+        }, 2900);
+    }
+
+    function triggerGameOver() {
+        gameState.screen = 'gameover';
+        sound.stopAmbient();
+        document.getElementById('hud-container').classList.add('hidden');
+        document.getElementById('hud-container').classList.remove('flex');
+
+        document.getElementById('go-step').textContent = `${gameState.currentStep} / ${TOTAL_STEPS}`;
+        document.getElementById('go-world').textContent = WORLDS[gameState.currentWorld - 1].name;
+
+        const goScreen = document.getElementById('screen-gameover');
+        goScreen.classList.remove('hidden');
+        goScreen.classList.add('flex');
+    }
+
+    function triggerVictory() {
+        gameState.screen = 'victory';
+        sound.stopAmbient();
+        sound.playVictoryFanfare();
+
+        visualState.flashColor = '#34d399';
+        visualState.flashAlpha = 0.85;
+
+        document.getElementById('hud-container').classList.add('hidden');
+        document.getElementById('hud-container').classList.remove('flex');
+
+        // Mostrar corazones restantes
+        document.getElementById('vic-lives').textContent = '❤️'.repeat(Math.max(1, gameState.lives));
+
+        // Construir mosaico de los 17 ODS
+        const grid = document.getElementById('victory-sdg-grid');
+        grid.innerHTML = '';
+        Object.values(SDG_DATA).forEach(sdg => {
+            const badge = document.createElement('div');
+            badge.className = 'rounded-xl p-1.5 text-center shadow-md border border-white/25 flex flex-col items-center justify-center';
+            badge.style.backgroundColor = sdg.color;
+            badge.title = `ODS ${sdg.num}: ${sdg.name}`;
+            badge.innerHTML = `
+                <span class="font-display font-bold text-xs leading-none">${sdg.num}</span>
+                <span class="text-sm leading-tight">${sdg.icon}</span>
+            `;
+            grid.appendChild(badge);
+        });
+
+        const vicScreen = document.getElementById('screen-victory');
+        vicScreen.classList.remove('hidden');
+        vicScreen.classList.add('flex');
+    }
+
+    // Arranque inicial al cargar la ventana
+    window.onload = function () {
+        buildStartWheelSVG();
+        requestAnimationFrame(gameLoop);
+    };
+    </script>
+</body>
+</html>
